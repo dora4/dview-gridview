@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <declare-styleable name="DoraGridView">
+        <attr name="dview_gv_enableInteraction" format="boolean"/>
+        <attr name="dview_gv_textColor" format="color" />
+        <attr name="dview_gv_gridLineColor" format="color" />
+        <attr name="dview_gv_selectionColor"   format="color" />
+    </declare-styleable>
+</resources>
