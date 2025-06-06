@@ -260,12 +260,11 @@ class DoraGridView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 if (isPotentialClick) {
                     val cellSize = computeCellSize()
-                    // 先计算“列索引”，后计算“行索引”
                     val rowIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
                     val columnIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
                     if (rowIndex in 0 until columnCellCount && columnIndex in 0 until rowCellCount) {
-                        selectedRow    = rowIndex
-                        selectedColumn = columnIndex
+                        selectedColumn    = rowIndex
+                        selectedRow = columnIndex
                         invalidate()
                         val selectedCell = cells?.getOrNull(rowIndex)?.getOrNull(columnIndex)
                         onCellSelectListener?.onCellSelected(rowIndex, columnIndex, selectedCell)
@@ -294,12 +293,19 @@ class DoraGridView @JvmOverloads constructor(
      *   columnCellCount = cellsMatrix.size         （行数）
      *   rowCellCount    = cellsMatrix[0].size      （列数）
      */
-    private fun setCells(cellsMatrix: Array<Array<Cell>>) {
+    private fun setCells(cellsMatrix: Array<Array<Cell>>, itemsPerRow: Int?) {
+        if (cellsMatrix.isNotEmpty()) {
+            return
+        }
         this.cells = cellsMatrix
-        // 数组的第一维长度是“行数”
-        this.columnCellCount = cellsMatrix.size
-        // 如果不为空，以第一行的列长度作为“列数”
-        this.rowCellCount = if (cellsMatrix.isNotEmpty()) cellsMatrix[0].size else 0
+        if (itemsPerRow != null) {
+            this.rowCellCount = itemsPerRow
+            this.columnCellCount = if (cellsMatrix.size % itemsPerRow == 0) cellsMatrix.size /
+                    itemsPerRow + 1 else cellsMatrix.size / itemsPerRow
+        } else {
+            this.rowCellCount = cellsMatrix[0].size
+            this.columnCellCount = cellsMatrix.size
+        }
         requestLayout()
         invalidate()
     }
@@ -334,7 +340,7 @@ class DoraGridView @JvmOverloads constructor(
         val matrix = Array(rowCount) { rowIndex ->
             flatCells.copyOfRange(rowIndex * perRow, (rowIndex + 1) * perRow)
         }
-        setCells(matrix)
+        setCells(matrix, itemsPerRow)
     }
 
     /**
