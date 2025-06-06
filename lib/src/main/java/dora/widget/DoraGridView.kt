@@ -294,7 +294,6 @@ class DoraGridView @JvmOverloads constructor(
      */
     private fun setCells(cellsMatrix: Array<Array<Cell>>, itemsPerRow: Int? = null) {
         if (cellsMatrix.isEmpty()) {
-            // 清空或者不做任何事都行
             this.cells = null
             this.rowCellCount = 0
             this.columnCellCount = 0
