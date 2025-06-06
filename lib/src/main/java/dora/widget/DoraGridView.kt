@@ -138,8 +138,8 @@ class DoraGridView @JvmOverloads constructor(
     private fun drawGridBackground(canvas: Canvas) {
         val cellSize = computeCellSize()
         val data = cells
-        for (i in 0 until rowCellCount) {
-            for (j in 0 until columnCellCount) {
+        for (i in 0 until columnCellCount) {
+            for (j in 0 until rowCellCount) {
                 val left   = horizontalSpacing + j * cellSize
                 val top    = verticalSpacing   + i * cellSize
                 val right  = left + cellSize
@@ -156,20 +156,20 @@ class DoraGridView @JvmOverloads constructor(
         val totalWidth  = cellSize * rowCellCount
         val totalHeight = cellSize * columnCellCount
         for (i in 0..rowCellCount) {
-            val y = verticalSpacing + i * cellSize
-            canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
+            val x = horizontalSpacing + i * cellSize
+            canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
         }
         for (j in 0..columnCellCount) {
-            val x = horizontalSpacing + j * cellSize
-            canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
+            val y = verticalSpacing + j * cellSize
+            canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
         }
     }
 
     private fun drawGridText(canvas: Canvas) {
         val cellSize = computeCellSize()
         val data = cells
-        for (i in 0 until rowCellCount) {
-            for (j in 0 until columnCellCount) {
+        for (i in 0 until columnCellCount) {
+            for (j in 0 until rowCellCount) {
                 val text = data?.getOrNull(i)?.getOrNull(j)?.text
                 if (!text.isNullOrEmpty()) {
                     val textWidth = textPaint.measureText(text)
@@ -215,8 +215,8 @@ class DoraGridView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 if (isPotentialClick) {
                     val cellSize = computeCellSize()
-                    val columnIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
-                    val rowIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
+                    val rowIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
+                    val columnIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
                     if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
                         selectedRow    = rowIndex
                         selectedColumn = columnIndex
@@ -271,6 +271,7 @@ class DoraGridView @JvmOverloads constructor(
         } else {
             3
         }
+        rowCellCount = perRow
         val rowCount = flatCells.size / perRow
         // 构造二维数组：每行 perRow 个元素
         val matrix = Array(rowCount) { rowIndex ->
