@@ -186,8 +186,8 @@ class DoraGridView @JvmOverloads constructor(
     private fun drawSelectionBorder(canvas: Canvas) {
         if (selectedRow in 0 until rowCellCount && selectedColumn in 0 until columnCellCount) {
             val cellSize = computeCellSize()
-            val left   = horizontalSpacing + selectedColumn * cellSize
-            val top    = verticalSpacing   + selectedRow    * cellSize
+            val left   = horizontalSpacing + selectedRow * cellSize
+            val top    = verticalSpacing   + selectedColumn * cellSize
             val right  = left + cellSize
             val bottom = top  + cellSize
             canvas.drawRect(RectF(left, top, right, bottom), selectionPaint)
@@ -242,10 +242,15 @@ class DoraGridView @JvmOverloads constructor(
         this.onCellSelectListener = listener
     }
 
-    private fun setCells(cells: Array<Array<Cell>>) {
+    private fun setCells(cells: Array<Array<Cell>>, rowCellCount: Int? = null) {
         this.cells = cells
-        rowCellCount = cells.size
-        columnCellCount = if (cells.isNotEmpty()) cells[0].size else 0
+        if (rowCellCount != null) {
+            this.rowCellCount = rowCellCount
+            this.columnCellCount = if (cells.size % this.rowCellCount == 0) { cells.size / this.rowCellCount + 1 } else { cells.size / this.rowCellCount }
+        } else {
+            this.rowCellCount = cells.size
+            this.columnCellCount = if (cells.isNotEmpty()) cells[0].size else 0
+        }
         requestLayout()
         invalidate()
     }
@@ -277,7 +282,7 @@ class DoraGridView @JvmOverloads constructor(
         val matrix = Array(rowCount) { rowIndex ->
             flatCells.copyOfRange(rowIndex * perRow, (rowIndex + 1) * perRow)
         }
-        setCells(matrix)
+        setCells(matrix, itemsPerRow)
     }
 
     /**
