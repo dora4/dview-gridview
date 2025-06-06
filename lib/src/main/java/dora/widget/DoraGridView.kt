@@ -262,7 +262,7 @@ class DoraGridView @JvmOverloads constructor(
                     val cellSize = computeCellSize()
                     val rowIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
                     val columnIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
-                    if (rowIndex in 0 until columnCellCount && columnIndex in 0 until rowCellCount) {
+                    if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
                         selectedColumn    = rowIndex
                         selectedRow = columnIndex
                         invalidate()
@@ -298,17 +298,26 @@ class DoraGridView @JvmOverloads constructor(
             return
         }
         this.cells = cellsMatrix
+        // 计算总元素数量
+        val totalElements = cellsMatrix.sumOf { it.size }
         if (itemsPerRow != null) {
+            // 指定每行元素数
             this.rowCellCount = itemsPerRow
-            this.columnCellCount = if (cellsMatrix.size % itemsPerRow == 0) cellsMatrix.size /
-                    itemsPerRow + 1 else cellsMatrix.size / itemsPerRow
+            // 计算总行数（即需要多少行来容纳所有元素）
+            this.columnCellCount = if (totalElements % itemsPerRow == 0) {
+                totalElements / itemsPerRow
+            } else {
+                totalElements / itemsPerRow + 1
+            }
         } else {
-            this.rowCellCount = cellsMatrix[0].size
-            this.columnCellCount = cellsMatrix.size
+            // 不指定 itemsPerRow 时，按矩阵原有结构行列
+            this.rowCellCount = cellsMatrix[0].size    // 第一行的元素数
+            this.columnCellCount = cellsMatrix.size    // 总行数（外层数组长度）
         }
         requestLayout()
         invalidate()
     }
+
 
     /**
      * 设置数据：传入每行各自的 Cell 数组。
