@@ -27,8 +27,8 @@ class DoraGridView @JvmOverloads constructor(
         strokeWidth = 5f
         color = Color.RED
     }
-    private var rowCellCount: Int = 1
-    private var columnCellCount: Int = 1
+    private var rowCellCount: Int = 3
+    private var columnCellCount: Int = 3
     private var enableInteraction: Boolean = false
     private var cells: Array<Array<Cell>>? = null
     private var selectedRow: Int = -1
@@ -232,7 +232,7 @@ class DoraGridView @JvmOverloads constructor(
         this.onCellSelectListener = listener
     }
 
-    fun setCells(cells: Array<Array<Cell>>) {
+    private fun setCells(cells: Array<Array<Cell>>) {
         this.cells = cells
         rowCellCount = cells.size
         columnCellCount = if (cells.isNotEmpty()) cells[0].size else 0
@@ -244,7 +244,7 @@ class DoraGridView @JvmOverloads constructor(
      * 设置数据。
      * @since 1.1
      */
-    fun setCells(vararg rows: Array<Cell>) {
+    fun setData(vararg rows: Array<Cell>) {
         val arr = Array(rows.size) { i -> rows[i] }
         setCells(arr)
     }
@@ -253,17 +253,9 @@ class DoraGridView @JvmOverloads constructor(
      * 设置数据。
      * @since 1.1
      */
-    fun setCells(cellsList: List<List<Cell>>) {
+    fun setData(cellsList: List<List<Cell>>) {
         val arr = cellsList.map { it.toTypedArray() }.toTypedArray()
         setCells(arr)
-    }
-
-    /**
-     * 设置数据。
-     * @since 1.1
-     */
-    fun setCells(cellsList: List<Array<Cell>>) {
-        setCells(cellsList.toTypedArray())
     }
 
     /**
@@ -271,7 +263,7 @@ class DoraGridView @JvmOverloads constructor(
      * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
      * @since 1.1
      */
-    fun setCells(flatCells: Array<Cell>, itemsPerRow: Int) {
+    fun setData(flatCells: Array<Cell>, itemsPerRow: Int) {
         // 校验 itemsPerRow：必须大于 0，且 flatCells.size % itemsPerRow == 0
         val perRow = if (itemsPerRow > 0 && flatCells.size % itemsPerRow == 0) {
             itemsPerRow
@@ -291,9 +283,42 @@ class DoraGridView @JvmOverloads constructor(
      * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
      * @since 1.1
      */
-    fun setCells(flatList: List<Cell>, itemsPerRow: Int) {
+    fun setData(flatList: List<Cell>, itemsPerRow: Int) {
         // 转成 Array<Cell> 并复用上面的方法
-        setCells(flatList.toTypedArray(), itemsPerRow)
+        setData(flatList.toTypedArray(), itemsPerRow)
+    }
+
+    /** 更新单个格子：若坐标合法，则覆盖 */
+    fun updateData(row: Int, column: Int, newCell: Cell) {
+        val data = cells ?: return
+        if (row in 0 until rowCellCount && column in 0 until columnCellCount) {
+            data[row][column] = newCell
+            invalidate()
+        }
+    }
+
+    /**
+     * 批量更新格子：传入一个 List，每个 Triple 的格式为 (rowIndex, columnIndex, newCell)。
+     * 遍历时只更新那些坐标合法的项，最后统一 invalidate()。
+     */
+    fun updateData(updates: List<Triple<Int, Int, Cell>>) {
+        val data = cells ?: return
+        var didChange = false
+        for ((r, c, newCell) in updates) {
+            if (r in 0 until rowCellCount && c in 0 until columnCellCount) {
+                data[r][c] = newCell
+                didChange = true
+            }
+        }
+        if (didChange) invalidate()
+    }
+
+    /**
+     * 批量更新格子（可变参数版），相当于把 vararg 转成 List 然后调用上面方法。
+     * 例如： updateCells(Triple(0,1,Cell(...)), Triple(2,2,Cell(...)))
+     */
+    fun updateData(vararg updates: Triple<Int, Int, Cell>) {
+        updateData(updates.toList())
     }
 
     fun resetSelection() {
