@@ -6,5 +6,7 @@
         <attr name="dview_gv_textColor" format="color" />
         <attr name="dview_gv_gridLineColor" format="color" />
         <attr name="dview_gv_selectionColor"   format="color" />
+        <attr name="dview_gv_horizontalSpacing" format="dimension"/>
+        <attr name="dview_gv_verticalSpacing" format="dimension"/>
     </declare-styleable>
 </resources>

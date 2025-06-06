@@ -10,7 +10,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import androidx.annotation.ColorInt
+import dora.widget.gridview.Cell
 import dora.widget.gridview.R
 
 class DoraGridView @JvmOverloads constructor(
@@ -27,7 +27,6 @@ class DoraGridView @JvmOverloads constructor(
         strokeWidth = 5f
         color = Color.RED
     }
-
     private var rowCellCount: Int = 1
     private var columnCellCount: Int = 1
     private var enableInteraction: Boolean = false
@@ -40,14 +39,17 @@ class DoraGridView @JvmOverloads constructor(
     private var downX: Float = 0f
     private var downY: Float = 0f
     private var isPotentialClick: Boolean = false
-
-    private var cellClickListener: OnCellClickListener? = null
+    private var horizontalSpacing: Float
+    private var verticalSpacing: Float
+    private var onCellSelectListener: OnCellSelectListener? = null
 
     init {
+        val density = context.resources.displayMetrics.density
+        horizontalSpacing = 5 * density
+        verticalSpacing = 5 * density
         initAttrs(context, attrs)
-        initPaints(context)
+        initPaints()
     }
-
 
     private fun initAttrs(context: Context, attrs: AttributeSet?) {
         val ta = context.obtainStyledAttributes(attrs, R.styleable.DoraGridView)
@@ -72,10 +74,26 @@ class DoraGridView @JvmOverloads constructor(
             R.styleable.DoraGridView_dview_gv_selectionColor,
             defaultSelection
         )
+        horizontalSpacing = ta.getDimension(
+            R.styleable.DoraGridView_dview_gv_horizontalSpacing,
+            horizontalSpacing
+        )
+        verticalSpacing = ta.getDimension(
+            R.styleable.DoraGridView_dview_gv_verticalSpacing,
+            verticalSpacing
+        )
         ta.recycle()
     }
 
-    private fun initPaints(context: Context) {
+    private fun computeCellSize(): Float {
+        val availWidth = measuredWidth.toFloat() - 2 * horizontalSpacing
+        val availHeight = measuredHeight.toFloat() - 2 * verticalSpacing
+        val cellWidth  = availWidth / rowCellCount
+        val cellHeight = availHeight / columnCellCount
+        return minOf(cellWidth, cellHeight)
+    }
+
+    private fun initPaints() {
         gridLinePaint.strokeWidth = 2f
         gridLinePaint.color = gridLineColor
 
@@ -89,7 +107,7 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val defaultSizeDp = 300
+        val defaultSizeDp = 370f
         val density = resources.displayMetrics.density
         val defaultSizePx = (defaultSizeDp * density).toInt()
         val width = resolveSize(defaultSizePx, widthMeasureSpec)
@@ -106,14 +124,14 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     private fun drawGridBackground(canvas: Canvas) {
-        val cellSize = measuredWidth.toFloat() / (rowCellCount + 2)
+        val cellSize = computeCellSize()
         val data = cells
         for (i in 0 until rowCellCount) {
             for (j in 0 until columnCellCount) {
-                val left = (i + 1) * cellSize
-                val top = (j + 1) * cellSize
-                val right = left + cellSize
-                val bottom = top + cellSize
+                val left   = horizontalSpacing + j * cellSize
+                val top    = verticalSpacing   + i * cellSize
+                val right  = left + cellSize
+                val bottom = top  + cellSize
                 val bgColor = data?.getOrNull(i)?.getOrNull(j)?.bgColor
                 gridBgPaint.color = bgColor ?: Color.BLACK
                 canvas.drawRect(RectF(left, top, right, bottom), gridBgPaint)
@@ -122,29 +140,33 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     private fun drawGridLines(canvas: Canvas) {
-        val cellSize = measuredWidth.toFloat() / (rowCellCount + 2)
-        // 垂直线
+        val cellSize = computeCellSize()
+        val totalWidth  = cellSize * rowCellCount
+        val totalHeight = cellSize * columnCellCount
+        // 垂直线：从最左边 horizontalSpacing 开始，每隔 cellSize 画一条
         for (i in 0..rowCellCount) {
-            val x = cellSize * (i + 1)
-            canvas.drawLine(x, cellSize, x, measuredHeight - cellSize, gridLinePaint)
+            val x = horizontalSpacing + i * cellSize
+            canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
         }
-        // 水平线
+        // 水平线：从最上方 verticalSpacing 开始，每隔 cellSize 画一条
         for (j in 0..columnCellCount) {
-            val y = cellSize * (j + 1)
-            canvas.drawLine(cellSize, y, measuredWidth - cellSize, y, gridLinePaint)
+            val y = verticalSpacing + j * cellSize
+            canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
         }
     }
 
     private fun drawGridText(canvas: Canvas) {
-        val cellSize = measuredWidth.toFloat() / (rowCellCount + 2)
+        val cellSize = computeCellSize()
         val data = cells
         for (i in 0 until rowCellCount) {
             for (j in 0 until columnCellCount) {
                 val text = data?.getOrNull(i)?.getOrNull(j)?.text
                 if (!text.isNullOrEmpty()) {
                     val textWidth = textPaint.measureText(text)
-                    val x = cellSize * (i + 1) + (cellSize - textWidth) / 2
-                    val y = cellSize * (j + 1) + (cellSize + textPaint.textSize) / 2 - textPaint.descent()
+                    val x = horizontalSpacing + j * cellSize + (cellSize - textWidth) / 2
+                    val y = verticalSpacing + i * cellSize +
+                            (cellSize + textPaint.textSize) / 2 -
+                            textPaint.descent()
                     canvas.drawText(text, x, y, textPaint)
                 }
             }
@@ -153,11 +175,11 @@ class DoraGridView @JvmOverloads constructor(
 
     private fun drawSelectionBorder(canvas: Canvas) {
         if (selectedRow in 0 until rowCellCount && selectedColumn in 0 until columnCellCount) {
-            val cellSize = measuredWidth.toFloat() / (rowCellCount + 2)
-            val left = cellSize * (selectedRow + 1)
-            val top = cellSize * (selectedColumn + 1)
-            val right = left + cellSize
-            val bottom = top + cellSize
+            val cellSize = computeCellSize()
+            val left   = horizontalSpacing + selectedColumn * cellSize
+            val top    = verticalSpacing   + selectedRow    * cellSize
+            val right  = left + cellSize
+            val bottom = top  + cellSize
             canvas.drawRect(RectF(left, top, right, bottom), selectionPaint)
         }
     }
@@ -182,15 +204,15 @@ class DoraGridView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 if (isPotentialClick) {
-                    val cellSize = measuredWidth.toFloat() / (rowCellCount + 2)
-                    val rowIndex = ((event.x - cellSize) / cellSize).toInt()
-                    val colIndex = ((event.y - cellSize) / cellSize).toInt()
-                    if (rowIndex in 0 until rowCellCount && colIndex in 0 until columnCellCount) {
-                        selectedRow = rowIndex
-                        selectedColumn = colIndex
+                    val cellSize = computeCellSize()
+                    val columnIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
+                    val rowIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
+                    if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
+                        selectedRow    = rowIndex
+                        selectedColumn = columnIndex
                         invalidate()
-                        val clickedCell = cells?.getOrNull(rowIndex)?.getOrNull(colIndex)
-                        cellClickListener?.onCellClick(rowIndex, colIndex, clickedCell)
+                        val selectedCell = cells?.getOrNull(rowIndex)?.getOrNull(columnIndex)
+                        onCellSelectListener?.onCellSelected(rowIndex, columnIndex, selectedCell)
                     }
                 }
                 isPotentialClick = false
@@ -202,12 +224,12 @@ class DoraGridView @JvmOverloads constructor(
         return true
     }
 
-    interface OnCellClickListener {
-        fun onCellClick(row: Int, column: Int, cell: Cell?)
+    interface OnCellSelectListener {
+        fun onCellSelected(rowIndex: Int, columnIndex: Int, cell: Cell?)
     }
 
-    fun setOnCellClickListener(listener: OnCellClickListener) {
-        this.cellClickListener = listener
+    fun setOnCellSelectListener(listener: OnCellSelectListener) {
+        this.onCellSelectListener = listener
     }
 
     fun setCells(cells: Array<Array<Cell>>) {
@@ -215,6 +237,68 @@ class DoraGridView @JvmOverloads constructor(
         rowCellCount = cells.size
         columnCellCount = if (cells.isNotEmpty()) cells[0].size else 0
         requestLayout()
+        invalidate()
+    }
+
+    /**
+     * 设置数据。
+     * @since 1.1
+     */
+    fun setCells(vararg rows: Array<Cell>) {
+        val arr = Array(rows.size) { i -> rows[i] }
+        setCells(arr)
+    }
+
+    /**
+     * 设置数据。
+     * @since 1.1
+     */
+    fun setCells(cellsList: List<List<Cell>>) {
+        val arr = cellsList.map { it.toTypedArray() }.toTypedArray()
+        setCells(arr)
+    }
+
+    /**
+     * 设置数据。
+     * @since 1.1
+     */
+    fun setCells(cellsList: List<Array<Cell>>) {
+        setCells(cellsList.toTypedArray())
+    }
+
+    /**
+     * 扁平化数组或集合，指定每行 itemCount 个 Cell，
+     * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
+     * @since 1.1
+     */
+    fun setCells(flatCells: Array<Cell>, itemsPerRow: Int) {
+        // 校验 itemsPerRow：必须大于 0，且 flatCells.size % itemsPerRow == 0
+        val perRow = if (itemsPerRow > 0 && flatCells.size % itemsPerRow == 0) {
+            itemsPerRow
+        } else {
+            3
+        }
+        val rowCount = flatCells.size / perRow
+        // 构造二维数组：每行 perRow 个元素
+        val matrix = Array(rowCount) { rowIndex ->
+            flatCells.copyOfRange(rowIndex * perRow, (rowIndex + 1) * perRow)
+        }
+        setCells(matrix)
+    }
+
+    /**
+     * 接受 List<Cell>，并指定每行 itemCount 个 Cell，
+     * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
+     * @since 1.1
+     */
+    fun setCells(flatList: List<Cell>, itemsPerRow: Int) {
+        // 转成 Array<Cell> 并复用上面的方法
+        setCells(flatList.toTypedArray(), itemsPerRow)
+    }
+
+    fun resetSelection() {
+        selectedRow    = -1
+        selectedColumn = -1
         invalidate()
     }
 
@@ -229,11 +313,4 @@ class DoraGridView @JvmOverloads constructor(
     fun setEnableInteraction(enable: Boolean) {
         this.enableInteraction = enable
     }
-
-    data class Cell(
-        val row: Int,
-        val column: Int,
-        val text: String? = null,
-        @ColorInt val bgColor: Int? = null
-    )
 }
