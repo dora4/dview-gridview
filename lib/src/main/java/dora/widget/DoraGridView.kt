@@ -203,6 +203,7 @@ class DoraGridView @JvmOverloads constructor(
         for (i in 0 until columnCellCount) {             // 行
             for (j in 0 until rowCellCount) {            // 列
                 val text = data?.getOrNull(i)?.getOrNull(j)?.text
+                val textColor = data?.getOrNull(i)?.getOrNull(j)?.textColor
                 if (!text.isNullOrEmpty()) {
                     val textWidth = textPaint.measureText(text)
                     // 水平居中：左边起点 + 列索引 * 单元格宽度 + (单元格宽度 - 文本宽度)/2
@@ -211,6 +212,7 @@ class DoraGridView @JvmOverloads constructor(
                     val y = verticalSpacing + i * cellSize +
                             (cellSize + textPaint.textSize) / 2 -
                             textPaint.descent()
+                    textPaint.color = textColor ?: Color.GRAY
                     canvas.drawText(text, x, y, textPaint)
                 }
             }
@@ -365,7 +367,7 @@ class DoraGridView @JvmOverloads constructor(
      */
     fun updateData(rowIndex: Int, columnIndex: Int, newCell: Cell) {
         val data = cells ?: return
-        if (rowIndex in 0 until columnCellCount && columnIndex in 0 until rowCellCount) {
+        if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
             data[rowIndex][columnIndex] = newCell
             invalidate()
         }
@@ -378,7 +380,7 @@ class DoraGridView @JvmOverloads constructor(
         val data = cells ?: return
         var didChange = false
         for ((r, c, newCell) in newCells) {
-            if (r in 0 until columnCellCount && c in 0 until rowCellCount) {
+            if (r in 0 until columnCellCount && c in 0 until columnCellCount) {
                 data[r][c] = newCell
                 didChange = true
             }
@@ -396,17 +398,6 @@ class DoraGridView @JvmOverloads constructor(
     fun resetSelection() {
         selectedRow = -1
         selectedColumn = -1
-        invalidate()
-    }
-
-    /**
-     * 外部直接强制指定行数和列数时会清掉数据。
-     */
-    fun setRowColumnCount(rowCount: Int, columnCount: Int) {
-        this.rowCellCount = rowCount
-        this.columnCellCount = columnCount
-        this.cells = null
-        requestLayout()
         invalidate()
     }
 
