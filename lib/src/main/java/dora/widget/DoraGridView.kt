@@ -135,11 +135,16 @@ class DoraGridView @JvmOverloads constructor(
         drawSelectionBorder(canvas)
     }
 
+    /**
+     * 将行循环改为 i in 0 until rowCellCount，
+     * 列循环改为 j in 0 until columnCellCount，
+     * 并且 data[row][column] 对应到 (i, j)。
+     */
     private fun drawGridBackground(canvas: Canvas) {
         val cellSize = computeCellSize()
         val data = cells
-        for (i in 0 until columnCellCount) {
-            for (j in 0 until rowCellCount) {
+        for (i in 0 until rowCellCount) {              // i 表示 “行” (row)
+            for (j in 0 until columnCellCount) {       // j 表示 “列” (column)
                 val left   = horizontalSpacing + j * cellSize
                 val top    = verticalSpacing   + i * cellSize
                 val right  = left + cellSize
@@ -151,15 +156,25 @@ class DoraGridView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * 网格线绘制：
+     *  - 垂直线的数量 = 列数 + 1，即 i in 0..columnCellCount
+     *  - 水平线的数量 = 行数 + 1，即 j in 0..rowCellCount
+     *  并且高度和宽度的计算也要对应行列：
+     *  totalWidth = cellSize * columnCellCount
+     *  totalHeight = cellSize * rowCellCount
+     */
     private fun drawGridLines(canvas: Canvas) {
         val cellSize = computeCellSize()
-        val totalWidth  = cellSize * rowCellCount
-        val totalHeight = cellSize * columnCellCount
-        for (i in 0..rowCellCount) {
+        val totalWidth  = cellSize * columnCellCount
+        val totalHeight = cellSize * rowCellCount
+        // 画垂直线 (columnCellCount + 1) 条
+        for (i in 0..columnCellCount) {
             val x = horizontalSpacing + i * cellSize
             canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
         }
-        for (j in 0..columnCellCount) {
+        // 画水平线 (rowCellCount + 1) 条
+        for (j in 0..rowCellCount) {
             val y = verticalSpacing + j * cellSize
             canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
         }
