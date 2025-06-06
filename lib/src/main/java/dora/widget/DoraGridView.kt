@@ -261,8 +261,8 @@ class DoraGridView @JvmOverloads constructor(
                 if (isPotentialClick) {
                     val cellSize = computeCellSize()
                     // 先计算“列索引”，后计算“行索引”
-                    val columnIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
-                    val rowIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
+                    val rowIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
+                    val columnIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
                     if (rowIndex in 0 until columnCellCount && columnIndex in 0 until rowCellCount) {
                         selectedRow    = rowIndex
                         selectedColumn = columnIndex
@@ -287,8 +287,6 @@ class DoraGridView @JvmOverloads constructor(
     fun setOnCellSelectListener(listener: OnCellSelectListener) {
         this.onCellSelectListener = listener
     }
-
-    // ------------------ “数据” 相关的方法 ------------------
 
     /**
      * 核心方法：直接设置一个二维数组，cells\[row\]\[column\]，
@@ -326,7 +324,7 @@ class DoraGridView @JvmOverloads constructor(
      * [[c0, c1], [c2, c3], [c4, c5]]，行数 = 3，列数 = 2
      */
     fun setData(flatCells: Array<Cell>, itemsPerRow: Int) {
-        val perRow = if (itemsPerRow > 0 && flatCells.size % itemsPerRow == 0) {
+        val perRow = if (itemsPerRow > 0) {
             itemsPerRow
         } else {
             3
