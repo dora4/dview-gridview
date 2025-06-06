@@ -293,7 +293,7 @@ class DoraGridView @JvmOverloads constructor(
      *   columnCellCount = cellsMatrix.size         （行数）
      *   rowCellCount    = cellsMatrix[0].size      （列数）
      */
-    private fun setCells(cellsMatrix: Array<Array<Cell>>, itemsPerRow: Int?) {
+    private fun setCells(cellsMatrix: Array<Array<Cell>>, itemsPerRow: Int? = null) {
         if (cellsMatrix.isNotEmpty()) {
             return
         }
