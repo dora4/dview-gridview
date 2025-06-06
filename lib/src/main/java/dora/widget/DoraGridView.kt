@@ -34,8 +34,11 @@ class DoraGridView @JvmOverloads constructor(
     private var selectedRow: Int = -1
     private var selectedColumn: Int = -1
     private var cellTextColor: Int = Color.WHITE
+    private var cellTextSize: Float = 30f
     private var gridLineColor: Int = Color.GRAY
-    private var selectionColor: Int = Color.RED
+    private var selectionBorderColor: Int = Color.RED
+    private var gridLineWidth: Float = 2f
+    private var selectionBorderWidth: Float = 5f
     private var downX: Float = 0f
     private var downY: Float = 0f
     private var isPotentialClick: Boolean = false
@@ -45,8 +48,8 @@ class DoraGridView @JvmOverloads constructor(
 
     init {
         val density = context.resources.displayMetrics.density
-        horizontalSpacing = 5 * density
-        verticalSpacing = 5 * density
+        horizontalSpacing = 10 * density
+        verticalSpacing = 10 * density
         initAttrs(context, attrs)
         initPaints()
     }
@@ -57,22 +60,30 @@ class DoraGridView @JvmOverloads constructor(
             R.styleable.DoraGridView_dview_gv_enableInteraction,
             false
         )
-        val defaultTextColor = Color.WHITE
-        val textColor = ta.getColor(
+        cellTextColor = ta.getColor(
             R.styleable.DoraGridView_dview_gv_textColor,
-            defaultTextColor
+            cellTextColor
         )
-        textPaint.color = textColor
-        val defaultGridLineColor = Color.GRAY
-        val gridLineColor = ta.getColor(
+        cellTextSize = ta.getDimension(
+            R.styleable.DoraGridView_dview_gv_textSize,
+            cellTextSize
+        )
+        gridLineColor = ta.getColor(
             R.styleable.DoraGridView_dview_gv_gridLineColor,
-            defaultGridLineColor
+            gridLineColor
         )
-        gridLinePaint.color = gridLineColor
-        val defaultSelection = Color.RED
-        selectionColor = ta.getColor(
-            R.styleable.DoraGridView_dview_gv_selectionColor,
-            defaultSelection
+
+        gridLineWidth = ta.getDimension(
+            R.styleable.DoraGridView_dview_gv_gridLineWidth,
+            gridLineWidth
+        )
+        selectionBorderColor = ta.getColor(
+            R.styleable.DoraGridView_dview_gv_selectionBorderColor,
+            selectionBorderColor
+        )
+        selectionBorderWidth = ta.getDimension(
+            R.styleable.DoraGridView_dview_gv_selectionBorderWidth,
+            selectionBorderWidth
         )
         horizontalSpacing = ta.getDimension(
             R.styleable.DoraGridView_dview_gv_horizontalSpacing,
@@ -94,20 +105,21 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     private fun initPaints() {
-        gridLinePaint.strokeWidth = 2f
+        gridLinePaint.strokeWidth = gridLineWidth
         gridLinePaint.color = gridLineColor
 
         gridBgPaint.style = Paint.Style.FILL
 
-        textPaint.textSize = 30f
         textPaint.color = cellTextColor
+        textPaint.color = cellTextColor
+        textPaint.textSize = cellTextSize
 
-        selectionPaint.color = selectionColor
-        selectionPaint.strokeWidth = 5f
+        selectionPaint.color = selectionBorderColor
+        selectionPaint.strokeWidth = selectionBorderWidth
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val defaultSizeDp = 370f
+        val defaultSizeDp = 380f
         val density = resources.displayMetrics.density
         val defaultSizePx = (defaultSizeDp * density).toInt()
         val width = resolveSize(defaultSizePx, widthMeasureSpec)
@@ -143,15 +155,13 @@ class DoraGridView @JvmOverloads constructor(
         val cellSize = computeCellSize()
         val totalWidth  = cellSize * rowCellCount
         val totalHeight = cellSize * columnCellCount
-        // 垂直线：从最左边 horizontalSpacing 开始，每隔 cellSize 画一条
         for (i in 0..rowCellCount) {
-            val x = horizontalSpacing + i * cellSize
-            canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
-        }
-        // 水平线：从最上方 verticalSpacing 开始，每隔 cellSize 画一条
-        for (j in 0..columnCellCount) {
-            val y = verticalSpacing + j * cellSize
+            val y = verticalSpacing + i * cellSize
             canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
+        }
+        for (j in 0..columnCellCount) {
+            val x = horizontalSpacing + j * cellSize
+            canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
         }
     }
 
@@ -242,7 +252,7 @@ class DoraGridView @JvmOverloads constructor(
 
     /**
      * 设置数据。
-     * @since 1.1
+     * @since 1.2
      */
     fun setData(vararg rows: Array<Cell>) {
         val arr = Array(rows.size) { i -> rows[i] }
@@ -250,18 +260,9 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 设置数据。
-     * @since 1.1
-     */
-    fun setData(cellsList: List<List<Cell>>) {
-        val arr = cellsList.map { it.toTypedArray() }.toTypedArray()
-        setCells(arr)
-    }
-
-    /**
-     * 扁平化数组或集合，指定每行 itemCount 个 Cell，
+     * 设置数据，扁平化数组或集合，指定每行 itemCount 个 Cell，
      * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
-     * @since 1.1
+     * @since 1.2
      */
     fun setData(flatCells: Array<Cell>, itemsPerRow: Int) {
         // 校验 itemsPerRow：必须大于 0，且 flatCells.size % itemsPerRow == 0
@@ -279,16 +280,18 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 接受 List<Cell>，并指定每行 itemCount 个 Cell，
+     * 设置数据，接受 List<Cell>，并指定每行 itemCount 个 Cell，
      * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
-     * @since 1.1
+     * @since 1.2
      */
     fun setData(flatList: List<Cell>, itemsPerRow: Int) {
         // 转成 Array<Cell> 并复用上面的方法
         setData(flatList.toTypedArray(), itemsPerRow)
     }
 
-    /** 更新单个格子：若坐标合法，则覆盖 */
+    /**
+     * 更新单个格子：若坐标合法，则覆盖。
+     */
     fun updateData(row: Int, column: Int, newCell: Cell) {
         val data = cells ?: return
         if (row in 0 until rowCellCount && column in 0 until columnCellCount) {
