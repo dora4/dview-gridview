@@ -246,7 +246,7 @@ class DoraGridView @JvmOverloads constructor(
         this.cells = cells
         if (rowCellCount != null) {
             this.rowCellCount = rowCellCount
-            this.columnCellCount = if (cells.size % this.rowCellCount == 0) { cells.size / this.rowCellCount + 1 } else { cells.size / this.rowCellCount }
+            this.columnCellCount = if (cells.size % this.rowCellCount == 0) cells.size / this.rowCellCount + 1 else cells.size / this.rowCellCount
         } else {
             this.rowCellCount = cells.size
             this.columnCellCount = if (cells.isNotEmpty()) cells[0].size else 0
@@ -276,13 +276,12 @@ class DoraGridView @JvmOverloads constructor(
         } else {
             3
         }
-        rowCellCount = perRow
         val rowCount = flatCells.size / perRow
         // 构造二维数组：每行 perRow 个元素
         val matrix = Array(rowCount) { rowIndex ->
             flatCells.copyOfRange(rowIndex * perRow, (rowIndex + 1) * perRow)
         }
-        setCells(matrix, itemsPerRow)
+        setCells(matrix, perRow)
     }
 
     /**
