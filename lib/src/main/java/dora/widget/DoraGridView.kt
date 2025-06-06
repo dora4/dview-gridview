@@ -119,7 +119,7 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val defaultSizeDp = 380f
+        val defaultSizeDp = 360f + horizontalSpacing * 2
         val density = resources.displayMetrics.density
         val defaultSizePx = (defaultSizeDp * density).toInt()
         val w = resolveSize(defaultSizePx, widthMeasureSpec)
@@ -305,9 +305,9 @@ class DoraGridView @JvmOverloads constructor(
             this.rowCellCount = itemsPerRow
             // 计算总行数（即需要多少行来容纳所有元素）
             this.columnCellCount = if (totalElements % itemsPerRow == 0) {
-                totalElements / itemsPerRow
-            } else {
                 totalElements / itemsPerRow + 1
+            } else {
+                totalElements / itemsPerRow
             }
         } else {
             // 不指定 itemsPerRow 时，按矩阵原有结构行列
@@ -317,7 +317,6 @@ class DoraGridView @JvmOverloads constructor(
         requestLayout()
         invalidate()
     }
-
 
     /**
      * 设置数据：传入每行各自的 Cell 数组。
@@ -362,10 +361,10 @@ class DoraGridView @JvmOverloads constructor(
     /**
      * 更新单个格子：如果 (row, column) 合法，就覆盖并重绘。
      */
-    fun updateData(row: Int, column: Int, newCell: Cell) {
+    fun updateData(rowIndex: Int, columnIndex: Int, newCell: Cell) {
         val data = cells ?: return
-        if (row in 0 until columnCellCount && column in 0 until rowCellCount) {
-            data[row][column] = newCell
+        if (rowIndex in 0 until columnCellCount && columnIndex in 0 until rowCellCount) {
+            data[rowIndex][columnIndex] = newCell
             invalidate()
         }
     }
@@ -373,10 +372,10 @@ class DoraGridView @JvmOverloads constructor(
     /**
      * 批量更新格子：传入 List，每个 Triple 是 (rowIndex, columnIndex, newCell)。
      */
-    fun updateData(updates: List<Triple<Int, Int, Cell>>) {
+    fun updateData(newCells: List<Triple<Int, Int, Cell>>) {
         val data = cells ?: return
         var didChange = false
-        for ((r, c, newCell) in updates) {
+        for ((r, c, newCell) in newCells) {
             if (r in 0 until columnCellCount && c in 0 until rowCellCount) {
                 data[r][c] = newCell
                 didChange = true
@@ -388,8 +387,8 @@ class DoraGridView @JvmOverloads constructor(
     /**
      * 批量更新（可变参数版）。
      */
-    fun updateData(vararg updates: Triple<Int, Int, Cell>) {
-        updateData(updates.toList())
+    fun updateData(vararg newCells: Triple<Int, Int, Cell>) {
+        updateData(newCells.toList())
     }
 
     fun resetSelection() {
@@ -402,7 +401,6 @@ class DoraGridView @JvmOverloads constructor(
      * 外部直接强制指定行数和列数时会清掉数据。
      */
     fun setRowColumnCount(rowCount: Int, columnCount: Int) {
-        // 传入的 rowCount 代表“列数”，columnCount 代表“行数”，保持与命名一致
         this.rowCellCount = rowCount
         this.columnCellCount = columnCount
         this.cells = null
