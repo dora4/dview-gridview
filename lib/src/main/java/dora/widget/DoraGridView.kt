@@ -179,16 +179,20 @@ class DoraGridView @JvmOverloads constructor(
             canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
         }
     }
-
+    /**
+     * 绘制文字：外层循环行 (row)，内层循环列 (column)。
+     */
     private fun drawGridText(canvas: Canvas) {
         val cellSize = computeCellSize()
         val data = cells
-        for (i in 0 until columnCellCount) {
-            for (j in 0 until rowCellCount) {
+        for (i in 0 until rowCellCount) {              // i 表示“行” (row)
+            for (j in 0 until columnCellCount) {       // j 表示“列” (column)
                 val text = data?.getOrNull(i)?.getOrNull(j)?.text
                 if (!text.isNullOrEmpty()) {
                     val textWidth = textPaint.measureText(text)
+                    // x：水平起点 = 左侧留白 + 列索引 * cellSize，加上水平居中偏移
                     val x = horizontalSpacing + j * cellSize + (cellSize - textWidth) / 2
+                    // y：垂直起点 = 顶部留白 + 行索引 * cellSize，加上垂直居中偏移
                     val y = verticalSpacing + i * cellSize +
                             (cellSize + textPaint.textSize) / 2 -
                             textPaint.descent()
@@ -198,17 +202,25 @@ class DoraGridView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * 绘制选中边框：selectedRow 表示“行”，selectedColumn 表示“列”。
+     * x = 留白 + selectedColumn * cellSize
+     * y = 留白 + selectedRow * cellSize
+     */
     private fun drawSelectionBorder(canvas: Canvas) {
         if (selectedRow in 0 until rowCellCount && selectedColumn in 0 until columnCellCount) {
             val cellSize = computeCellSize()
-            val left   = horizontalSpacing + selectedRow * cellSize
-            val top    = verticalSpacing   + selectedColumn * cellSize
+            val left   = horizontalSpacing + selectedColumn * cellSize
+            val top    = verticalSpacing   + selectedRow * cellSize
             val right  = left + cellSize
             val bottom = top  + cellSize
             canvas.drawRect(RectF(left, top, right, bottom), selectionPaint)
         }
     }
 
+    /**
+     * 修改点击事件：event.x 对应“列索引”，event.y 对应“行索引”。
+     */
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (!enableInteraction) {
             return true
@@ -230,8 +242,9 @@ class DoraGridView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 if (isPotentialClick) {
                     val cellSize = computeCellSize()
-                    val rowIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
-                    val columnIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
+                    // 列索引由 x 计算，行索引由 y 计算
+                    val columnIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
+                    val rowIndex    = ((event.y - verticalSpacing) / cellSize).toInt()
                     if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
                         selectedRow    = rowIndex
                         selectedColumn = columnIndex
