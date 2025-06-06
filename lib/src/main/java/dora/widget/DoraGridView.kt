@@ -295,6 +295,11 @@ class DoraGridView @JvmOverloads constructor(
      */
     private fun setCells(cellsMatrix: Array<Array<Cell>>, itemsPerRow: Int? = null) {
         if (cellsMatrix.isEmpty()) {
+            this.cells = null
+            this.rowCellCount = 0
+            this.columnCellCount = 0
+            requestLayout()
+            invalidate()
             return
         }
         this.cells = cellsMatrix
@@ -332,23 +337,22 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 扁平化数组 + 指定每行 itemCount 个 Cell：
-     * 如果 flatCells.size % itemsPerRow != 0，就回退到每行 3 个
-     * 例如：flatCells = [c0, c1, c2, c3, c4, c5]，itemsPerRow = 2，则分成
-     * [[c0, c1], [c2, c3], [c4, c5]]，行数 = 3，列数 = 2
+     * 扁平化数组 + 指定每行 itemCount 个 Cell
+     * 1) 先计算总行数：rowCount = 向上取整(flatCells.size / perRow)
+     * 2) 最后一行如果不足 perRow，也能正确存放剩余元素
      */
     fun setData(flatCells: Array<Cell>, itemsPerRow: Int) {
-        val perRow = if (itemsPerRow > 0) {
-            itemsPerRow
-        } else {
-            3
-        }
-        val rowCount = flatCells.size / perRow
-        // 构造二维数组：rows 大小 = rowCount，每行长度 = perRow
+        val perRow = if (itemsPerRow > 0) itemsPerRow else 3
+        // 通过向上取整得到行数
+        val rowCount = (flatCells.size + perRow - 1) / perRow
         val matrix = Array(rowCount) { rowIndex ->
-            flatCells.copyOfRange(rowIndex * perRow, (rowIndex + 1) * perRow)
+            // 计算当前行起始、结束下标
+            val start = rowIndex * perRow
+            val end = minOf(start + perRow, flatCells.size)
+            // 如果最后一行不足 perRow，就取剩余的
+            flatCells.copyOfRange(start, end)
         }
-        setCells(matrix, itemsPerRow)
+        setCells(matrix, perRow)
     }
 
     /**
