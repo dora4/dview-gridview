@@ -20,19 +20,27 @@ class DoraGridView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private val gridLinePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val gridBgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private val gridBgPaint   = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val textPaint     = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private val selectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 5f
         color = Color.RED
     }
-    private var rowCellCount: Int = 3
-    private var columnCellCount: Int = 3
+
+    // “行/列数量” 的命名说明：
+    //   rowCellCount    —— 每一行有多少个 Cell（也就是列的数量）
+    //   columnCellCount —— 总共有多少行
+    // 之所以这么命名是为了兼容原来的逻辑：cells[row][column]，cells.size == 行数，所以 columnCellCount 用来表示 cells.size。
+    private var rowCellCount: Int = 0      // 实际上代表每行单元格的个数（列数）
+    private var columnCellCount: Int = 0   // 实际上代表总共有多少行
+
     private var enableInteraction: Boolean = false
     private var cells: Array<Array<Cell>>? = null
-    private var selectedRow: Int = -1
-    private var selectedColumn: Int = -1
+
+    private var selectedRow: Int = -1      // 选中的“行”索引
+    private var selectedColumn: Int = -1   // 选中的“列”索引
+
     private var cellTextColor: Int = Color.WHITE
     private var cellTextSize: Float = 30f
     private var gridLineColor: Int = Color.GRAY
@@ -42,14 +50,16 @@ class DoraGridView @JvmOverloads constructor(
     private var downX: Float = 0f
     private var downY: Float = 0f
     private var isPotentialClick: Boolean = false
-    private var horizontalSpacing: Float
-    private var verticalSpacing: Float
+
+    private var horizontalSpacing: Float  // 左右留白
+    private var verticalSpacing: Float    // 上下留白
+
     private var onCellSelectListener: OnCellSelectListener? = null
 
     init {
         val density = context.resources.displayMetrics.density
         horizontalSpacing = 10 * density
-        verticalSpacing = 10 * density
+        verticalSpacing   = 10 * density
         initAttrs(context, attrs)
         initPaints()
     }
@@ -72,7 +82,6 @@ class DoraGridView @JvmOverloads constructor(
             R.styleable.DoraGridView_dview_gv_gridLineColor,
             gridLineColor
         )
-
         gridLineWidth = ta.getDimension(
             R.styleable.DoraGridView_dview_gv_gridLineWidth,
             gridLineWidth
@@ -96,21 +105,12 @@ class DoraGridView @JvmOverloads constructor(
         ta.recycle()
     }
 
-    private fun computeCellSize(): Float {
-        val availWidth = measuredWidth.toFloat() - 2 * horizontalSpacing
-        val availHeight = measuredHeight.toFloat() - 2 * verticalSpacing
-        val cellWidth  = availWidth / rowCellCount
-        val cellHeight = availHeight / columnCellCount
-        return minOf(cellWidth, cellHeight)
-    }
-
     private fun initPaints() {
         gridLinePaint.strokeWidth = gridLineWidth
         gridLinePaint.color = gridLineColor
 
         gridBgPaint.style = Paint.Style.FILL
 
-        textPaint.color = cellTextColor
         textPaint.color = cellTextColor
         textPaint.textSize = cellTextSize
 
@@ -122,9 +122,9 @@ class DoraGridView @JvmOverloads constructor(
         val defaultSizeDp = 380f
         val density = resources.displayMetrics.density
         val defaultSizePx = (defaultSizeDp * density).toInt()
-        val width = resolveSize(defaultSizePx, widthMeasureSpec)
-        val height = resolveSize(defaultSizePx, heightMeasureSpec)
-        setMeasuredDimension(width, height)
+        val w = resolveSize(defaultSizePx, widthMeasureSpec)
+        val h = resolveSize(defaultSizePx, heightMeasureSpec)
+        setMeasuredDimension(w, h)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -136,15 +136,31 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 将行循环改为 i in 0 until rowCellCount，
-     * 列循环改为 j in 0 until columnCellCount，
-     * 并且 data[row][column] 对应到 (i, j)。
+     * 计算单元格边长：取可用宽度/列数 和 可用高度/行数 的最小值
+     */
+    private fun computeCellSize(): Float {
+        // 可用宽度 = 整体宽度 - 左右留白
+        val availWidth  = measuredWidth.toFloat() - 2 * horizontalSpacing
+        // 可用高度 = 整体高度 - 上下留白
+        val availHeight = measuredHeight.toFloat() - 2 * verticalSpacing
+        if (rowCellCount == 0 || columnCellCount == 0) {
+            return 0f
+        }
+        val cellWidth  = availWidth / rowCellCount
+        val cellHeight = availHeight / columnCellCount
+        return minOf(cellWidth, cellHeight)
+    }
+
+    /**
+     * 绘制背景色（背景色来自 cells\[row\]\[column\].bgColor）
+     * 外层 i 对应 行（0 .. columnCellCount-1）
+     * 内层 j 对应 列（0 .. rowCellCount-1）
      */
     private fun drawGridBackground(canvas: Canvas) {
         val cellSize = computeCellSize()
         val data = cells
-        for (i in 0 until rowCellCount) {              // i 表示 “行” (row)
-            for (j in 0 until columnCellCount) {       // j 表示 “列” (column)
+        for (i in 0 until columnCellCount) {           // i = 行索引
+            for (j in 0 until rowCellCount) {          // j = 列索引
                 val left   = horizontalSpacing + j * cellSize
                 val top    = verticalSpacing   + i * cellSize
                 val right  = left + cellSize
@@ -157,42 +173,41 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 网格线绘制：
-     *  - 垂直线的数量 = 列数 + 1，即 i in 0..columnCellCount
-     *  - 水平线的数量 = 行数 + 1，即 j in 0..rowCellCount
-     *  并且高度和宽度的计算也要对应行列：
-     *  totalWidth = cellSize * columnCellCount
-     *  totalHeight = cellSize * rowCellCount
+     * 绘制网格线。
+     *  - 垂直线要画 (rowCellCount + 1) 条，x = horizontalSpacing + index * cellSize
+     *  - 水平线要画 (columnCellCount + 1) 条，y = verticalSpacing + index * cellSize
      */
     private fun drawGridLines(canvas: Canvas) {
         val cellSize = computeCellSize()
-        val totalWidth  = cellSize * columnCellCount
-        val totalHeight = cellSize * rowCellCount
-        // 画垂直线 (columnCellCount + 1) 条
-        for (i in 0..columnCellCount) {
+        val totalWidth  = cellSize * rowCellCount    // 总宽 = 列数 * 单元格宽度
+        val totalHeight = cellSize * columnCellCount // 总高 = 行数 * 单元格高度
+
+        // 画垂直线
+        for (i in 0..rowCellCount) {
             val x = horizontalSpacing + i * cellSize
             canvas.drawLine(x, verticalSpacing, x, verticalSpacing + totalHeight, gridLinePaint)
         }
-        // 画水平线 (rowCellCount + 1) 条
-        for (j in 0..rowCellCount) {
+        // 画水平线
+        for (j in 0..columnCellCount) {
             val y = verticalSpacing + j * cellSize
             canvas.drawLine(horizontalSpacing, y, horizontalSpacing + totalWidth, y, gridLinePaint)
         }
     }
+
     /**
-     * 绘制文字：外层循环行 (row)，内层循环列 (column)。
+     * 绘制文字：同样 i 对应 行，j 对应 列。
      */
     private fun drawGridText(canvas: Canvas) {
         val cellSize = computeCellSize()
         val data = cells
-        for (i in 0 until rowCellCount) {              // i 表示“行” (row)
-            for (j in 0 until columnCellCount) {       // j 表示“列” (column)
+        for (i in 0 until columnCellCount) {             // 行
+            for (j in 0 until rowCellCount) {            // 列
                 val text = data?.getOrNull(i)?.getOrNull(j)?.text
                 if (!text.isNullOrEmpty()) {
                     val textWidth = textPaint.measureText(text)
-                    // x：水平起点 = 左侧留白 + 列索引 * cellSize，加上水平居中偏移
+                    // 水平居中：左边起点 + 列索引 * 单元格宽度 + (单元格宽度 - 文本宽度)/2
                     val x = horizontalSpacing + j * cellSize + (cellSize - textWidth) / 2
-                    // y：垂直起点 = 顶部留白 + 行索引 * cellSize，加上垂直居中偏移
+                    // 垂直居中：上边起点 + 行索引 * 单元格高度 + (单元格高度 + 字体高度)/2 - descent
                     val y = verticalSpacing + i * cellSize +
                             (cellSize + textPaint.textSize) / 2 -
                             textPaint.descent()
@@ -203,12 +218,13 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 绘制选中边框：selectedRow 表示“行”，selectedColumn 表示“列”。
-     * x = 留白 + selectedColumn * cellSize
-     * y = 留白 + selectedRow * cellSize
+     * 绘制选中框：selectedRow = 行索引，selectedColumn = 列索引。
+     * left = horizontalSpacing + selectedColumn * cellSize
+     * top  = verticalSpacing   + selectedRow * cellSize
      */
     private fun drawSelectionBorder(canvas: Canvas) {
-        if (selectedRow in 0 until rowCellCount && selectedColumn in 0 until columnCellCount) {
+        // row must be < columnCellCount，col must be < rowCellCount
+        if (selectedRow in 0 until columnCellCount && selectedColumn in 0 until rowCellCount) {
             val cellSize = computeCellSize()
             val left   = horizontalSpacing + selectedColumn * cellSize
             val top    = verticalSpacing   + selectedRow * cellSize
@@ -219,7 +235,9 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 修改点击事件：event.x 对应“列索引”，event.y 对应“行索引”。
+     * 点击事件：判断触摸是否在某个单元格里，并触发 onCellSelectListener。
+     *  - rowIndex = ((event.y - verticalSpacing) / cellSize).toInt()
+     *  - columnIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
      */
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (!enableInteraction) {
@@ -242,10 +260,10 @@ class DoraGridView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 if (isPotentialClick) {
                     val cellSize = computeCellSize()
-                    // 列索引由 x 计算，行索引由 y 计算
+                    // 先计算“列索引”，后计算“行索引”
                     val columnIndex = ((event.x - horizontalSpacing) / cellSize).toInt()
-                    val rowIndex    = ((event.y - verticalSpacing) / cellSize).toInt()
-                    if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
+                    val rowIndex    = ((event.y - verticalSpacing)   / cellSize).toInt()
+                    if (rowIndex in 0 until columnCellCount && columnIndex in 0 until rowCellCount) {
                         selectedRow    = rowIndex
                         selectedColumn = columnIndex
                         invalidate()
@@ -270,78 +288,83 @@ class DoraGridView @JvmOverloads constructor(
         this.onCellSelectListener = listener
     }
 
-    private fun setCells(cells: Array<Array<Cell>>, rowCellCount: Int? = null) {
-        this.cells = cells
-        if (rowCellCount != null) {
-            this.rowCellCount = rowCellCount
-            this.columnCellCount = if (cells.size % this.rowCellCount == 0) cells.size / this.rowCellCount + 1 else cells.size / this.rowCellCount
-        } else {
-            this.rowCellCount = cells.size
-            this.columnCellCount = if (cells.isNotEmpty()) cells[0].size else 0
-        }
+    // ------------------ “数据” 相关的方法 ------------------
+
+    /**
+     * 核心方法：直接设置一个二维数组，cells\[row\]\[column\]，
+     * 并且根据数组自动计算行/列数量：
+     *   columnCellCount = cellsMatrix.size         （行数）
+     *   rowCellCount    = cellsMatrix[0].size      （列数）
+     */
+    private fun setCells(cellsMatrix: Array<Array<Cell>>) {
+        this.cells = cellsMatrix
+        // 数组的第一维长度是“行数”
+        this.columnCellCount = cellsMatrix.size
+        // 如果不为空，以第一行的列长度作为“列数”
+        this.rowCellCount = if (cellsMatrix.isNotEmpty()) cellsMatrix[0].size else 0
         requestLayout()
         invalidate()
     }
 
     /**
-     * 设置数据。
-     * @since 1.2
+     * 设置数据：传入每行各自的 Cell 数组。
+     * 例如：
+     *   setData(
+     *     arrayOf(Cell(...), Cell(...), Cell(...)),
+     *     arrayOf(Cell(...), Cell(...), Cell(...))
+     *   )
      */
     fun setData(vararg rows: Array<Cell>) {
-        val arr = Array(rows.size) { i -> rows[i] }
-        setCells(arr)
+        // 直接把 vararg rows 当成二维数组
+        setCells(rows as Array<Array<Cell>>)
     }
 
     /**
-     * 设置数据，扁平化数组或集合，指定每行 itemCount 个 Cell，
-     * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
-     * @since 1.2
+     * 扁平化数组 + 指定每行 itemCount 个 Cell：
+     * 如果 flatCells.size % itemsPerRow != 0，就回退到每行 3 个
+     * 例如：flatCells = [c0, c1, c2, c3, c4, c5]，itemsPerRow = 2，则分成
+     * [[c0, c1], [c2, c3], [c4, c5]]，行数 = 3，列数 = 2
      */
     fun setData(flatCells: Array<Cell>, itemsPerRow: Int) {
-        // 校验 itemsPerRow：必须大于 0，且 flatCells.size % itemsPerRow == 0
         val perRow = if (itemsPerRow > 0 && flatCells.size % itemsPerRow == 0) {
             itemsPerRow
         } else {
             3
         }
         val rowCount = flatCells.size / perRow
-        // 构造二维数组：每行 perRow 个元素
+        // 构造二维数组：rows 大小 = rowCount，每行长度 = perRow
         val matrix = Array(rowCount) { rowIndex ->
             flatCells.copyOfRange(rowIndex * perRow, (rowIndex + 1) * perRow)
         }
-        setCells(matrix, perRow)
+        setCells(matrix)
     }
 
     /**
-     * 设置数据，接受 List<Cell>，并指定每行 itemCount 个 Cell，
-     * 如果总数不能被 itemCount 整除，则回退到默认每行 3 个。
-     * @since 1.2
+     * 扁平化列表版本，内部复用上面的方法。
      */
     fun setData(flatList: List<Cell>, itemsPerRow: Int) {
-        // 转成 Array<Cell> 并复用上面的方法
         setData(flatList.toTypedArray(), itemsPerRow)
     }
 
     /**
-     * 更新单个格子：若坐标合法，则覆盖。
+     * 更新单个格子：如果 (row, column) 合法，就覆盖并重绘。
      */
     fun updateData(row: Int, column: Int, newCell: Cell) {
         val data = cells ?: return
-        if (row in 0 until rowCellCount && column in 0 until columnCellCount) {
+        if (row in 0 until columnCellCount && column in 0 until rowCellCount) {
             data[row][column] = newCell
             invalidate()
         }
     }
 
     /**
-     * 批量更新格子：传入一个 List，每个 Triple 的格式为 (rowIndex, columnIndex, newCell)。
-     * 遍历时只更新那些坐标合法的项，最后统一 invalidate()。
+     * 批量更新格子：传入 List，每个 Triple 是 (rowIndex, columnIndex, newCell)。
      */
     fun updateData(updates: List<Triple<Int, Int, Cell>>) {
         val data = cells ?: return
         var didChange = false
         for ((r, c, newCell) in updates) {
-            if (r in 0 until rowCellCount && c in 0 until columnCellCount) {
+            if (r in 0 until columnCellCount && c in 0 until rowCellCount) {
                 data[r][c] = newCell
                 didChange = true
             }
@@ -350,20 +373,23 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 批量更新格子（可变参数版），相当于把 vararg 转成 List 然后调用上面方法。
-     * 例如： updateCells(Triple(0,1,Cell(...)), Triple(2,2,Cell(...)))
+     * 批量更新（可变参数版）。
      */
     fun updateData(vararg updates: Triple<Int, Int, Cell>) {
         updateData(updates.toList())
     }
 
     fun resetSelection() {
-        selectedRow    = -1
+        selectedRow = -1
         selectedColumn = -1
         invalidate()
     }
 
+    /**
+     * 外部直接强制指定行数和列数时会清掉数据。
+     */
     fun setRowColumnCount(rowCount: Int, columnCount: Int) {
+        // 传入的 rowCount 代表“列数”，columnCount 代表“行数”，保持与命名一致
         this.rowCellCount = rowCount
         this.columnCellCount = columnCount
         this.cells = null
