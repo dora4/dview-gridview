@@ -288,13 +288,13 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 核心方法：直接设置一个二维数组，cells\[row\]\[column\]，
-     * 并且根据数组自动计算行/列数量：
-     *   columnCellCount = cellsMatrix.size         （行数）
-     *   rowCellCount    = cellsMatrix[0].size      （列数）
+     * 核心方法：直接设置一个二维数组。
+     * cellsMatrix\[row\]\[column\]
+     * itemsPerRow 可空。如果不为空，则扁平化后按照每行 itemsPerRow 个元素重新排列。
      */
     private fun setCells(cellsMatrix: Array<Array<Cell>>, itemsPerRow: Int? = null) {
         if (cellsMatrix.isEmpty()) {
+            // 清空或者不做任何事都行
             this.cells = null
             this.rowCellCount = 0
             this.columnCellCount = 0
@@ -302,23 +302,22 @@ class DoraGridView @JvmOverloads constructor(
             invalidate()
             return
         }
+
         this.cells = cellsMatrix
-        // 计算总元素数量
-        val totalElements = cellsMatrix.sumOf { it.size }
+
         if (itemsPerRow != null) {
-            // 指定每行元素数
+            // 计算总元素数量
+            val totalElements = cellsMatrix.sumOf { it.size }
+            // 每行元素数（列数）
             this.rowCellCount = itemsPerRow
-            // 计算总行数（即需要多少行来容纳所有元素）
-            this.columnCellCount = if (totalElements % itemsPerRow == 0) {
-                totalElements / itemsPerRow + 1
-            } else {
-                totalElements / itemsPerRow
-            }
+            // 总行数 = 向上取整(totalElements / itemsPerRow)
+            this.columnCellCount = (totalElements + itemsPerRow - 1) / itemsPerRow
         } else {
-            // 不指定 itemsPerRow 时，按矩阵原有结构行列
-            this.rowCellCount = cellsMatrix[0].size    // 第一行的元素数
-            this.columnCellCount = cellsMatrix.size    // 总行数（外层数组长度）
+            // 按原有二维数组结构
+            this.rowCellCount = cellsMatrix[0].size
+            this.columnCellCount = cellsMatrix.size
         }
+
         requestLayout()
         invalidate()
     }
