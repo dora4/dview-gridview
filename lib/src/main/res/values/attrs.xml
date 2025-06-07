@@ -3,13 +3,16 @@
 <resources>
     <declare-styleable name="DoraGridView">
         <attr name="dview_gv_enableInteraction" format="boolean"/>
-        <attr name="dview_gv_textColor" format="color" />
-        <attr name="dview_gv_textSize" format="dimension" />
-        <attr name="dview_gv_gridLineColor" format="color" />
-        <attr name="dview_gv_gridLineWidth" format="dimension" />
-        <attr name="dview_gv_selectionBorderColor" format="color" />
-        <attr name="dview_gv_selectionBorderWidth" format="dimension" />
-        <attr name="dview_gv_horizontalSpacing" format="dimension"/>
-        <attr name="dview_gv_verticalSpacing" format="dimension"/>
+        <attr name="dview_gv_textColor" format="color|reference" />
+        <attr name="dview_gv_textSize" format="dimension|reference" />
+        <attr name="dview_gv_cellBgColor" format="color|reference" />
+        <attr name="dview_gv_selectedTextColor" format="color|reference" />
+        <attr name="dview_gv_selectedTextSize"  format="dimension|reference" />
+        <attr name="dview_gv_gridLineColor" format="color|reference" />
+        <attr name="dview_gv_gridLineWidth" format="dimension|reference" />
+        <attr name="dview_gv_selectionBorderColor" format="color|reference" />
+        <attr name="dview_gv_selectionBorderWidth" format="dimension|reference" />
+        <attr name="dview_gv_horizontalSpacing" format="dimension|reference"/>
+        <attr name="dview_gv_verticalSpacing" format="dimension|reference"/>
     </declare-styleable>
 </resources>

@@ -43,6 +43,9 @@ class DoraGridView @JvmOverloads constructor(
 
     private var cellTextColor: Int = Color.WHITE
     private var cellTextSize: Float = 30f
+    private var cellBgColor: Int = Color.BLACK
+    private var selectedTextColor: Int   = cellTextColor
+    private var selectedTextSize:  Float = cellTextSize
     private var gridLineColor: Int = Color.GRAY
     private var selectionBorderColor: Int = Color.RED
     private var gridLineWidth: Float = 2f
@@ -78,6 +81,18 @@ class DoraGridView @JvmOverloads constructor(
             R.styleable.DoraGridView_dview_gv_textSize,
             cellTextSize
         )
+        cellBgColor = ta.getColor(
+            R.styleable.DoraGridView_dview_gv_cellBgColor,
+            cellBgColor
+        )
+        selectedTextColor = ta.getColor(
+            R.styleable.DoraGridView_dview_gv_selectedTextColor,
+            selectedTextColor
+        )
+        selectedTextSize = ta.getDimension(
+            R.styleable.DoraGridView_dview_gv_selectedTextSize,
+            selectedTextSize
+        )
         gridLineColor = ta.getColor(
             R.styleable.DoraGridView_dview_gv_gridLineColor,
             gridLineColor
@@ -110,6 +125,7 @@ class DoraGridView @JvmOverloads constructor(
         gridLinePaint.color = gridLineColor
 
         gridBgPaint.style = Paint.Style.FILL
+        gridBgPaint.color = cellBgColor
 
         textPaint.color = cellTextColor
         textPaint.textSize = cellTextSize
@@ -166,7 +182,8 @@ class DoraGridView @JvmOverloads constructor(
                 val right  = left + cellSize
                 val bottom = top  + cellSize
                 val bgColor = data?.getOrNull(i)?.getOrNull(j)?.bgColor
-                gridBgPaint.color = bgColor ?: Color.BLACK
+                    ?: cellBgColor
+                gridBgPaint.color = bgColor
                 canvas.drawRect(RectF(left, top, right, bottom), gridBgPaint)
             }
         }
@@ -212,7 +229,11 @@ class DoraGridView @JvmOverloads constructor(
                     val y = verticalSpacing + i * cellSize +
                             (cellSize + textPaint.textSize) / 2 -
                             textPaint.descent()
-                    textPaint.color = textColor ?: Color.GRAY
+
+                    val isSelected = (i == selectedRow && j == selectedColumn)
+                    textPaint.color    = if (isSelected) selectedTextColor else (textColor ?: cellTextColor)
+                    textPaint.textSize = if (isSelected) selectedTextSize else cellTextSize
+
                     canvas.drawText(text, x, y, textPaint)
                 }
             }
@@ -368,7 +389,7 @@ class DoraGridView @JvmOverloads constructor(
     fun updateData(rowIndex: Int, columnIndex: Int, newCell: Cell) {
         val data = cells ?: return
         if (rowIndex in 0 until rowCellCount && columnIndex in 0 until columnCellCount) {
-            data[rowIndex][columnIndex] = newCell
+            data[columnIndex][rowIndex] = newCell
             invalidate()
         }
     }
@@ -381,7 +402,7 @@ class DoraGridView @JvmOverloads constructor(
         var didChange = false
         for ((r, c, newCell) in newCells) {
             if (r in 0 until columnCellCount && c in 0 until columnCellCount) {
-                data[r][c] = newCell
+                data[c][r] = newCell
                 didChange = true
             }
         }
