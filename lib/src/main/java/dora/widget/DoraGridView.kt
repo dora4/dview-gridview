@@ -135,7 +135,7 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val defaultSizeDp = 360f + horizontalSpacing * 2
+        val defaultSizeDp = 380f // 360 + 2倍留白
         val density = resources.displayMetrics.density
         val defaultSizePx = (defaultSizeDp * density).toInt()
         val w = resolveSize(defaultSizePx, widthMeasureSpec)
@@ -152,7 +152,7 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 计算单元格边长：取可用宽度/列数 和 可用高度/行数 的最小值
+     * 计算单元格边长：取可用宽度/列数 和 可用高度/行数 的最小值。
      */
     private fun computeCellSize(): Float {
         // 可用宽度 = 整体宽度 - 左右留白
@@ -168,7 +168,7 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 绘制背景色（背景色来自 cells\[row\]\[column\].bgColor）
+     * 绘制背景色（背景色来自 cells\[row\]\[column\].bgColor）。
      * 外层 i 对应 行（0 .. columnCellCount-1）
      * 内层 j 对应 列（0 .. rowCellCount-1）
      */
@@ -358,7 +358,7 @@ class DoraGridView @JvmOverloads constructor(
     }
 
     /**
-     * 扁平化数组 + 指定每行 itemCount 个 Cell
+     * 扁平化数组 + 指定每行 itemCount 个 Cell。
      * 1) 先计算总行数：rowCount = 向上取整(flatCells.size / perRow)
      * 2) 最后一行如果不足 perRow，也能正确存放剩余元素
      */
@@ -416,12 +416,18 @@ class DoraGridView @JvmOverloads constructor(
         updateData(newCells.toList())
     }
 
+    /**
+     * 所有格子恢复到未选中状态。
+     */
     fun resetSelection() {
         selectedRow = -1
         selectedColumn = -1
         invalidate()
     }
 
+    /**
+     * 启用交互。让其可以选中格子。
+     */
     fun setEnableInteraction(enable: Boolean) {
         this.enableInteraction = enable
     }
