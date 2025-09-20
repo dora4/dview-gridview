@@ -289,7 +289,7 @@ class DoraGridView @JvmOverloads constructor(
                         selectedColumn    = rowIndex
                         selectedRow = columnIndex
                         invalidate()
-                        val selectedCell = cells?.getOrNull(rowIndex)?.getOrNull(columnIndex)
+                        val selectedCell = cells?.getOrNull(columnIndex)?.getOrNull(rowIndex)
                         onCellSelectListener?.onCellSelected(rowIndex, columnIndex, selectedCell)
                     }
                 }
